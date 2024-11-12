@@ -15700,6 +15700,10 @@ __metadata:
   resolution: "root-workspace-0b6124@workspace:."
   dependencies:
     "@anthropic-ai/sdk": "npm:^0.32.1"
+    "@emotion/react": "npm:^11.13.3"
+    "@emotion/styled": "npm:^11.13.0"
+    "@mui/material": "npm:^6.1.6"
+    "@mui/system": "npm:^6.1.6"
     "@redwoodjs/core": "npm:8.4.0"
     "@redwoodjs/project-config": "npm:8.4.0"
     cross-fetch: "npm:^4.0.0"
