@@ -1,8 +1,24 @@
 import { Form, TextField, Submit } from '@redwoodjs/forms'
+import { useMutation } from '@redwoodjs/web'
+
+const SEND_MESSAGE_MUTATION = gql`
+  mutation SendMessageMutation($message: String!) {
+    sendMessage(message: $message)
+  }
+`
 
 const MyPagePage = () => {
-  const onSubmit = (data) => {
-    console.log(data)
+  const [sendMessage] = useMutation(SEND_MESSAGE_MUTATION)
+
+  const onSubmit = async (data) => {
+    try {
+      const response = await sendMessage({
+        variables: { message: data.message },
+      })
+      console.log('Anthropic Response:', response.data.sendMessage)
+    } catch (error) {
+      console.error('Error:', error)
+    }
   }
 
   return (
