@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { getWeather } from 'src/services/weather/weather'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -22,15 +23,23 @@ Input: ${message}`,
       ],
     })
 
-    // Parse the response text as JSON
     const locationData = JSON.parse(response.content[0].text)
+
+    // Get weather data
+    const weatherData = await getWeather(locationData)
 
     return {
       city: locationData.city,
       state: locationData.state,
+      weather: {
+        temp: weatherData.main.temp,
+        feels_like: weatherData.main.feels_like,
+        humidity: weatherData.main.humidity,
+        description: weatherData.weather[0].description,
+      },
     }
   } catch (error) {
-    console.error('Anthropic API Error:', error)
+    console.error('API Error:', error)
     throw error
   }
 }

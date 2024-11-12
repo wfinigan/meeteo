@@ -8075,6 +8075,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cross-fetch@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "cross-fetch@npm:4.0.0"
+  dependencies:
+    node-fetch: "npm:^2.6.12"
+  checksum: 10c0/386727dc4c6b044746086aced959ff21101abb85c43df5e1d151547ccb6f338f86dec3f28b9dbddfa8ff5b9ec8662ed2263ad4607a93b2dc354fb7fe3bbb898a
+  languageName: node
+  linkType: hard
+
 "cross-inspect@npm:1.0.1":
   version: 1.0.1
   resolution: "cross-inspect@npm:1.0.1"
@@ -15211,6 +15220,7 @@ __metadata:
     "@anthropic-ai/sdk": "npm:^0.32.1"
     "@redwoodjs/core": "npm:8.4.0"
     "@redwoodjs/project-config": "npm:8.4.0"
+    cross-fetch: "npm:^4.0.0"
   languageName: unknown
   linkType: soft
 
