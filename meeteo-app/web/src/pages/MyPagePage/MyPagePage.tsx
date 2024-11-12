@@ -13,6 +13,14 @@ const SEND_MESSAGE_MUTATION = gql`
         humidity
         description
       }
+      clothing {
+        footwear
+        top
+        bottom
+        accessories
+        wildcard1
+        wildcard2
+      }
     }
   }
 `
@@ -52,10 +60,22 @@ const MyPagePage = () => {
             {result.city}, {result.state}
           </h2>
           <div className="mt-2">
-            <p>Temperature: {result.weather.temp}&deg;F</p>
-            <p>Feels like: {result.weather.feels_like}&deg;F</p>
+            <p>Temperature: {result.weather.temp}°F</p>
+            <p>Feels like: {result.weather.feels_like}°F</p>
             <p>Humidity: {result.weather.humidity}%</p>
             <p>Conditions: {result.weather.description}</p>
+          </div>
+
+          <div className="mt-4">
+            <h3 className="text-lg font-semibold">Suggested Outfit</h3>
+            <ul className="list-disc pl-5 mt-2">
+              <li>Footwear: {result.clothing.footwear}</li>
+              <li>Top: {result.clothing.top}</li>
+              <li>Bottom: {result.clothing.bottom}</li>
+              <li>Accessories: {result.clothing.accessories}</li>
+              <li>Also Consider: {result.clothing.wildcard1}</li>
+              <li>And Maybe: {result.clothing.wildcard2}</li>
+            </ul>
           </div>
         </div>
       )}
