@@ -10,11 +10,13 @@ import {
   CircularProgress,
   Card,
   CardContent,
+  Button,
 } from '@mui/material'
 import Grid from '@mui/material/Grid2'
 import ThermostatIcon from '@mui/icons-material/Thermostat'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import CloudIcon from '@mui/icons-material/Cloud'
+import { Link, routes } from '@redwoodjs/router'
 
 const SEND_MESSAGE_MUTATION = gql`
   mutation SendMessageMutation($message: String!) {
@@ -39,15 +41,23 @@ const SEND_MESSAGE_MUTATION = gql`
   }
 `
 
-const MyPagePage = () => {
+const HomePage = () => {
   const [sendMessage] = useMutation(SEND_MESSAGE_MUTATION)
   const [result, setResult] = useState(null)
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showExample, setShowExample] = useState(true)
+
+  const resetState = () => {
+    setResult(null)
+    setInputValue('')
+    setShowExample(true)
+  }
 
   const onSubmit = async () => {
     try {
       setLoading(true)
+      setShowExample(false)
       const response = await sendMessage({
         variables: { message: inputValue },
       })
@@ -87,38 +97,50 @@ const MyPagePage = () => {
               lineHeight: 1,
             }}
           >
-            <Typography
-              component="span"
-              sx={{
-                color: '#000',
-                fontFamily: 'inherit',
-                fontSize: 'inherit',
-                fontWeight: 'inherit',
-              }}
+            <Link
+              to={routes.home()}
+              style={{ textDecoration: 'none', display: 'flex' }}
+              onClick={resetState}
             >
-              Meet
-            </Typography>
-            <Typography
-              component="span"
-              sx={{
-                color: '#2196f3',
-                fontFamily: 'inherit',
-                fontSize: 'inherit',
-                fontWeight: 'inherit',
-              }}
-            >
-              Eo
-            </Typography>
+              <Typography
+                component="span"
+                sx={{
+                  color: '#000',
+                  fontFamily: 'inherit',
+                  fontSize: 'inherit',
+                  fontWeight: 'inherit',
+                }}
+              >
+                Meet
+              </Typography>
+              <Typography
+                component="span"
+                sx={{
+                  color: '#2196f3',
+                  fontFamily: 'inherit',
+                  fontSize: 'inherit',
+                  fontWeight: 'inherit',
+                }}
+              >
+                Eo
+              </Typography>
+            </Link>
           </Typography>
         </Box>
         <Form onSubmit={onSubmit}>
-          <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: 2,
+              mb: 2
+            }}
+          >
             <TextField
               name="message"
               label="Describe a location"
               variant="outlined"
               fullWidth
-              required
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               sx={{
@@ -128,18 +150,62 @@ const MyPagePage = () => {
                 },
               }}
             />
-            <Submit
-              className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
-              style={{ minWidth: '140px', height: '56px' }}
-              disabled={loading}
+            <Box
+              sx={{
+                minWidth: '140px',
+                '& button': {  // This targets the Submit button inside
+                  width: '100%',
+                  height: '56px',
+                  backgroundColor: '#2196f3',
+                  color: 'white',
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  fontSize: '1rem',
+                  fontWeight: 500,
+                  border: 'none',
+                  '&:hover': {
+                    backgroundColor: '#1976d2'
+                  },
+                  '&:disabled': {
+                    backgroundColor: '#2196f3',
+                    opacity: 0.5,
+                  },
+                }
+              }}
             >
-              {loading ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : (
-                'Find Location'
-              )}
-            </Submit>
+              <Submit
+                disabled={loading || inputValue.trim().length === 0}
+              >
+                {loading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  'Ask Eo'
+                )}
+              </Submit>
+            </Box>
           </Box>
+          {showExample && (
+            <Box sx={{ mb: 4 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 1 }}
+              >
+                Try an example:
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setInputValue('City where the Boston Red Sox play')}
+                sx={{
+                  textTransform: 'none',
+                  mr: 1
+                }}
+              >
+                City where the Boston Red Sox play
+              </Button>
+            </Box>
+          )}
         </Form>
 
         {result && (
@@ -273,4 +339,4 @@ const MyPagePage = () => {
   )
 }
 
-export default MyPagePage
+export default HomePage
