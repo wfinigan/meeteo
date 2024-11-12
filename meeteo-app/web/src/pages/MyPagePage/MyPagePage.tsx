@@ -1,20 +1,23 @@
-// import { Link, routes } from '@redwoodjs/router'
-import { Metadata } from '@redwoodjs/web'
+import { Form, TextField, Submit } from '@redwoodjs/forms'
 
 const MyPagePage = () => {
-  return (
-    <>
-      <Metadata title="MyPage" description="MyPage page" />
+  const onSubmit = (data) => {
+    console.log(data)
+  }
 
-      <h1>MyPagePage</h1>
-      <p>
-        Find me in <code>./web/src/pages/MyPagePage/MyPagePage.tsx</code>
-      </p>
-      {/*
-          My default route is named `myPage`, link to me with:
-          `<Link to={routes.myPage()}>MyPage</Link>`
-      */}
-    </>
+  return (
+    <div>
+      <Form onSubmit={onSubmit}>
+        <TextField
+          name="message"
+          className="px-4 py-2 border rounded-md"
+          validation={{ required: true }}
+        />
+        <Submit className="ml-4 bg-blue-500 text-white px-4 py-2 rounded-md">
+          Send
+        </Submit>
+      </Form>
+    </div>
   )
 }
 
