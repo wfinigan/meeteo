@@ -15,7 +15,7 @@
   ]
 [api]
   port = 8911
-  includeEnvironmentVariables = ["ANTHROPIC_API_KEY", "OPENWEATHER_API_KEY"]
+  includeEnvironmentVariables = ["ANTHROPIC_API_KEY", "OPENWEATHER_API_KEY", "CANOPY_API_KEY"]
 [browser]
   open = true
 [notifications]

@@ -1,6 +1,8 @@
-import { Form, Submit } from '@redwoodjs/forms'
-import { useMutation } from '@redwoodjs/web'
 import { useState } from 'react'
+
+import CloudIcon from '@mui/icons-material/Cloud'
+import ThermostatIcon from '@mui/icons-material/Thermostat'
+import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import {
   TextField,
   Container,
@@ -21,12 +23,18 @@ import {
   IconButton,
 } from '@mui/material'
 import Grid from '@mui/material/Grid2'
-import ThermostatIcon from '@mui/icons-material/Thermostat'
-import WaterDropIcon from '@mui/icons-material/WaterDrop'
-import CloudIcon from '@mui/icons-material/Cloud'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+
+import { Form, Submit } from '@redwoodjs/forms'
 import { Link, routes } from '@redwoodjs/router'
+import { useMutation } from '@redwoodjs/web'
+
+type UnsplashImage = {
+  url: string;
+  photographerName: string;
+  photographerUrl: string;
+}
 
 const SEND_MESSAGE_MUTATION = gql`
   mutation SendMessageMutation($message: String!) {
@@ -47,31 +55,55 @@ const SEND_MESSAGE_MUTATION = gql`
           recommendation
           productTitle
           purchaseUrl
+          image
+          photographer
+          photographerUrl
+          imageId
         }
         top {
           recommendation
           productTitle
           purchaseUrl
+          image
+          photographer
+          photographerUrl
+          imageId
         }
         bottom {
           recommendation
           productTitle
           purchaseUrl
+          image
+          photographer
+          photographerUrl
+          imageId
         }
         accessories {
           recommendation
           productTitle
           purchaseUrl
+          image
+          photographer
+          photographerUrl
+          imageId
         }
         wildcard1 {
           recommendation
           productTitle
           purchaseUrl
+          image
+          photographer
+          photographerUrl
+          imageId
         }
         wildcard2 {
           recommendation
           productTitle
           purchaseUrl
+          image
+          photographer
+          photographerUrl
+          imageId
         }
       }
     }
@@ -171,7 +203,7 @@ const HomePage = () => {
               display: 'flex',
               flexDirection: { xs: 'column', sm: 'row' },
               gap: 2,
-              mb: 2
+              mb: 2,
             }}
           >
             <TextField
@@ -191,7 +223,8 @@ const HomePage = () => {
             <Box
               sx={{
                 minWidth: '140px',
-                '& button': {  // This targets the Submit button inside
+                '& button': {
+                  // This targets the Submit button inside
                   width: '100%',
                   height: '56px',
                   backgroundColor: '#2196f3',
@@ -202,18 +235,16 @@ const HomePage = () => {
                   fontWeight: 500,
                   border: 'none',
                   '&:hover': {
-                    backgroundColor: '#1976d2'
+                    backgroundColor: '#1976d2',
                   },
                   '&:disabled': {
                     backgroundColor: '#2196f3',
                     opacity: 0.5,
                   },
-                }
+                },
               }}
             >
-              <Submit
-                disabled={loading || inputValue.trim().length === 0}
-              >
+              <Submit disabled={loading || inputValue.trim().length === 0}>
                 {loading ? (
                   <CircularProgress size={24} color="inherit" />
                 ) : (
@@ -224,20 +255,18 @@ const HomePage = () => {
           </Box>
           {showExample && (
             <Box sx={{ mb: 4 }}>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 1 }}
-              >
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Try an example:
               </Typography>
               <Button
                 variant="outlined"
                 size="small"
-                onClick={() => setInputValue('City where the Boston Red Sox play')}
+                onClick={() =>
+                  setInputValue('City where the Boston Red Sox play')
+                }
                 sx={{
                   textTransform: 'none',
-                  mr: 1
+                  mr: 1,
                 }}
               >
                 City where the Boston Red Sox play
@@ -253,7 +282,8 @@ const HomePage = () => {
                 {result.location.place_name}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                {result.location.lat.toFixed(4)}°N, {result.location.lon.toFixed(4)}°W
+                {result.location.lat.toFixed(4)}°N,{' '}
+                {result.location.lon.toFixed(4)}°W
               </Typography>
 
               <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -339,36 +369,85 @@ const HomePage = () => {
               </Typography>
               <Box
                 sx={{
-                  display: 'grid',
-                  gridTemplateColumns: {
-                    xs: '1fr', // mobile: single column
-                    sm: 'repeat(3, 1fr)', // tablet & up: three columns
+                  columnCount: {
+                    xs: 2,
+                    sm: 3,
                   },
-                  gap: 2,
+                  columnGap: 2,
                 }}
               >
                 {[
-                  { label: 'Footwear', value: result.clothing.footwear.recommendation },
-                  { label: 'Top', value: result.clothing.top.recommendation },
-                  { label: 'Weather Bonus', value: result.clothing.wildcard1.recommendation },
-                  { label: 'Style Boost', value: result.clothing.wildcard2.recommendation },
-                  { label: 'Bottom', value: result.clothing.bottom.recommendation },
-                  { label: 'Accessories', value: result.clothing.accessories.recommendation },
+                  { label: 'Footwear', item: result.clothing.footwear },
+                  { label: 'Top', item: result.clothing.top },
+                  { label: 'Weather Bonus', item: result.clothing.wildcard1 },
+                  { label: 'Style Boost', item: result.clothing.wildcard2 },
+                  { label: 'Bottom', item: result.clothing.bottom },
+                  { label: 'Accessories', item: result.clothing.accessories },
                 ].map((item) => (
-                  <Card key={item.label} sx={{ height: '100%' }}>
-                    <CardContent>
+                  <Card
+                    key={item.label}
+                    sx={{
+                      display: 'inline-block',
+                      width: '100%',
+                      height: 'auto',
+                      overflow: 'hidden',
+                      boxShadow: 'none',
+                      mb: 2,
+                      borderRadius: 0,
+                    }}
+                  >
+                    <Box sx={{ position: 'relative' }}>
+                      <img
+                        src={item.item.image}
+                        alt={item.label}
+                        style={{
+                          width: '100%',
+                          height: 'auto',
+                          objectFit: 'cover',
+                          display: 'block',
+                        }}
+                        onLoad={() => {
+                          // Trigger download event when image is loaded
+                          fetch(`https://api.unsplash.com/photos/${item.item.imageId}/download`, {
+                            headers: {
+                              Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`,
+                            },
+                          })
+                        }}
+                      />
                       <Typography
-                        variant="subtitle1"
-                        color="text.secondary"
-                        gutterBottom
-                        component="div"
+                        variant="caption"
+                        sx={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          bgcolor: 'rgba(0, 0, 0, 0.6)',
+                          color: 'white',
+                          p: 1,
+                          textAlign: 'center',
+                        }}
                       >
-                        {item.label}
+                        Photo by{' '}
+                        <MuiLink
+                          href={item.item.photographerUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{ color: 'white' }}
+                        >
+                          {item.item.photographer}
+                        </MuiLink>{' '}
+                        on{' '}
+                        <MuiLink
+                          href="https://unsplash.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{ color: 'white' }}
+                        >
+                          Unsplash
+                        </MuiLink>
                       </Typography>
-                      <Typography component="div" variant="body1">
-                        {item.value}
-                      </Typography>
-                    </CardContent>
+                    </Box>
                   </Card>
                 ))}
               </Box>

@@ -21,23 +21,47 @@ const cleanProductTitle = (title: string) => {
 
 export const searchGoogleProduct = async (query: string) => {
   try {
+    if (!GOOGLE_API_KEY || !GOOGLE_SEARCH_ENGINE_ID) {
+      console.error('Missing Google API credentials')
+      return getFallbackProduct(query)
+    }
+
     const url =
       `https://www.googleapis.com/customsearch/v1?` +
       `key=${GOOGLE_API_KEY}` +
       `&cx=${GOOGLE_SEARCH_ENGINE_ID}` +
-      `&q=${encodeURIComponent(query)}` +
+      `&q=${encodeURIComponent(query + ' clothing buy')}` +
       `&num=1`
 
+    console.log('Searching Google for:', query)
     const response = await fetch(url)
     const data = await response.json()
 
     if (!response.ok) {
+      if (data.error?.message?.includes('Quota exceeded')) {
+        console.log('Google API quota exceeded, using fallback')
+        return getFallbackProduct(query)
+      }
+
+      console.error('Google API error response:', data)
       throw new Error(
         `Google API error: ${data.error?.message || response.statusText}`
       )
     }
 
-    const item = data.items?.[0]
+    if (!data.items?.length) {
+      console.log('No results found for query:', query)
+      return {
+        productTitle: 'No products found',
+        purchaseUrl: '#',
+      }
+    }
+
+    const item = data.items[0]
+    console.log('Found product:', {
+      title: item.title,
+      link: item.link,
+    })
 
     return {
       productTitle: item?.title
@@ -46,9 +70,19 @@ export const searchGoogleProduct = async (query: string) => {
       purchaseUrl: item?.link || '#',
     }
   } catch (error) {
-    return {
-      productTitle: 'Product unavailable',
-      purchaseUrl: '#',
-    }
+    console.error('Google Shopping search error:', error)
+    return getFallbackProduct(query)
+  }
+}
+
+// Fallback function that returns a generic shopping URL
+const getFallbackProduct = (query: string) => {
+  // Encode the query for use in URLs
+  const encodedQuery = encodeURIComponent(query)
+
+  // Return a search on a major shopping site
+  return {
+    productTitle: `Shop for ${query}`,
+    purchaseUrl: `https://www.amazon.com/s?k=${encodedQuery}+clothing`,
   }
 }
