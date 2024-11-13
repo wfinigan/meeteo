@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 import CloudIcon from '@mui/icons-material/Cloud'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import ThermostatIcon from '@mui/icons-material/Thermostat'
+import UploadIcon from '@mui/icons-material/Upload'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import {
   TextField,
@@ -29,6 +30,7 @@ import Grid from '@mui/material/Grid2'
 import { Form, Submit } from '@redwoodjs/forms'
 import { Link, routes } from '@redwoodjs/router'
 import { useMutation } from '@redwoodjs/web'
+import { toast } from '@redwoodjs/web/toast'
 
 import { useAuth } from 'src/auth'
 import Sidebar from 'src/components/Sidebar/Sidebar'
@@ -113,6 +115,16 @@ const SEND_MESSAGE_MUTATION = gql`
   }
 `
 
+const ANALYZE_OUTFIT_MUTATION = gql`
+  mutation AnalyzeOutfitMutation($input: AnalyzeOutfitInput!) {
+    analyzeOutfit(input: $input) {
+      success
+      feedback
+      error
+    }
+  }
+`
+
 const HomePage = () => {
   const { isAuthenticated, signUp, currentUser, logOut } = useAuth()
 
@@ -144,6 +156,12 @@ const HomePage = () => {
   const [showExample, setShowExample] = useState(true)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [selectedSubmission, setSelectedSubmission] = useState(null)
+  const [analyzeOutfit] = useMutation(ANALYZE_OUTFIT_MUTATION)
+  const fileInputRef = useRef(null)
+  const [typingFeedback, setTypingFeedback] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [hasUploaded, setHasUploaded] = useState(false)
 
   const resetState = () => {
     setResult(null)
@@ -179,43 +197,82 @@ const HomePage = () => {
     setShowExample(false)
   }
 
+  const typewriterEffect = (text) => {
+    setIsTyping(true)
+    setTypingFeedback('')
+    let index = 0
+
+    const typewriter = setInterval(() => {
+      if (index < text.length) {
+        setTypingFeedback(text.slice(0, index + 1))
+        index++
+      } else {
+        clearInterval(typewriter)
+        setIsTyping(false)
+      }
+    }, 25)
+
+    return () => clearInterval(typewriter)
+  }
+
+  const loadingDotsEffect = () => {
+    let dots = ''
+    return setInterval(() => {
+      dots = dots.length >= 3 ? '' : dots + '.'
+      setTypingFeedback(`Analyzing${dots}`)
+    }, 500)
+  }
+
+  const handleUpload = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      setIsAnalyzing(true)
+      setHasUploaded(true)
+      const loadingInterval = loadingDotsEffect()
+
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        const base64Image = e.target.result as string
+        console.log('Image format check:', {
+          startsWithData: base64Image.startsWith('data:image/'),
+          length: base64Image.length,
+        })
+
+        const response = await analyzeOutfit({
+          variables: {
+            input: {
+              image: base64Image,
+              weather: {
+                temp: result.weather.temp,
+                feelsLike: result.weather.feels_like,
+                description: result.weather.description,
+              },
+            },
+          },
+        })
+
+        clearInterval(loadingInterval)
+        setIsAnalyzing(false)
+
+        if (response.data.analyzeOutfit.success) {
+          typewriterEffect(response.data.analyzeOutfit.feedback)
+        } else {
+          toast.error(response.data.analyzeOutfit.error || 'Analysis failed')
+        }
+      }
+      reader.readAsDataURL(file)
+    } catch (error) {
+      setIsAnalyzing(false)
+      console.error('Upload error:', error)
+      toast.error('Failed to analyze image')
+    }
+  }
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Sidebar onSubmissionSelect={handleSubmissionSelect} />
-      {isAuthenticated && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 16,
-            right: 24,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-          }}
-        >
-          <Typography
-            sx={{
-              color: 'text.primary',
-              fontSize: '1rem',
-              fontWeight: 500,
-            }}
-          >
-            {currentUser?.name || 'User'}
-          </Typography>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleLogOut}
-            sx={{
-              textTransform: 'none',
-              borderColor: 'rgba(0, 0, 0, 0.23)',
-              color: 'text.primary',
-            }}
-          >
-            Log Out
-          </Button>
-        </Box>
-      )}
 
       <Paper elevation={0} sx={{ p: 4, bgcolor: 'transparent' }}>
         <Box
@@ -273,30 +330,6 @@ const HomePage = () => {
             </Link>
           </Typography>
         </Box>
-
-        {!isAuthenticated && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-            <Button
-              variant="contained"
-              onClick={handleSignUp}
-              sx={{
-                backgroundColor: '#2196f3',
-                color: 'white',
-                textTransform: 'none',
-                fontSize: '1rem',
-                fontWeight: 500,
-                px: 4,
-                py: 1,
-                borderRadius: '8px',
-                '&:hover': {
-                  backgroundColor: '#1976d2',
-                },
-              }}
-            >
-              Sign Up
-            </Button>
-          </Box>
-        )}
 
         <Form onSubmit={onSubmit}>
           <Box
@@ -378,6 +411,75 @@ const HomePage = () => {
 
         {result && (
           <Box sx={{ mt: 4 }}>
+            <Paper
+              elevation={1}
+              sx={{
+                p: 4,
+                mb: 4,
+                borderRadius: 2,
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: { xs: 3, sm: 0 },
+                justifyContent: 'space-between',
+                alignItems: { xs: 'stretch', sm: 'flex-start' },
+                backgroundColor: '#f3e5f5',
+                border: '1px solid #e1bee7',
+              }}
+            >
+              <Typography
+                variant="h6"
+                component="div"
+                sx={{
+                  color: 'text.secondary',
+                  fontWeight: 400,
+                  flexGrow: 1,
+                  wordWrap: 'break-word',
+                }}
+              >
+                {isAnalyzing || isTyping || typingFeedback
+                  ? typingFeedback
+                  : "Check your fit: Upload an image to ask Eo if it's a good match for the weather"}
+              </Typography>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                  justifyContent: { xs: 'center', sm: 'flex-end' },
+                }}
+              >
+                {!hasUploaded && (
+                  <Typography
+                    component="span"
+                    sx={{
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      color: '#9c27b0',
+                      letterSpacing: '0.1em',
+                      flexShrink: 0,
+                    }}
+                  >
+                    NEW
+                  </Typography>
+                )}
+                <Button
+                  variant="contained"
+                  startIcon={<UploadIcon />}
+                  onClick={() => fileInputRef.current?.click()}
+                  sx={{
+                    backgroundColor: '#9c27b0',
+                    '&:hover': {
+                      backgroundColor: '#7b1fa2',
+                    },
+                    textTransform: 'none',
+                    flexShrink: 0,
+                  }}
+                >
+                  Upload Image
+                </Button>
+              </Box>
+            </Paper>
+
             <Paper elevation={1} sx={{ p: 4, mb: 4, borderRadius: 2 }}>
               <Typography variant="h4" component="h1" gutterBottom>
                 {result.location.place_name}
@@ -593,92 +695,89 @@ const HomePage = () => {
                 </Box>
 
                 <Collapse in={detailsOpen}>
-                  <Box sx={{ overflowX: 'auto' }}>
-                    <Table
-                      sx={{
-                        minWidth: 650,
-                        '& th, & td': {
-                          borderBottom: '1px solid rgba(224, 224, 224, 0.4)',
-                          padding: '16px',
-                        },
-                      }}
-                    >
-                      <TableHead>
-                        <TableRow>
-                          <TableCell
+                  <Box>
+                    {[
+                      { label: 'Footwear', item: result.clothing.footwear },
+                      { label: 'Top', item: result.clothing.top },
+                      { label: 'Bottom', item: result.clothing.bottom },
+                      {
+                        label: 'Accessories',
+                        item: result.clothing.accessories,
+                      },
+                      {
+                        label: 'Weather Bonus',
+                        item: result.clothing.wildcard1,
+                      },
+                      { label: 'Style Boost', item: result.clothing.wildcard2 },
+                    ].map(({ label, item }) => {
+                      // Extract base URL
+                      const baseUrl = item.purchaseUrl
+                        ? new URL(item.purchaseUrl).hostname.replace('www.', '')
+                        : ''
+
+                      return (
+                        <Box
+                          key={label}
+                          sx={{
+                            mb: 3,
+                            pb: 3,
+                            borderBottom: '1px solid rgba(224, 224, 224, 0.4)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            width: '100%',
+                          }}
+                        >
+                          <Typography
+                            variant="subtitle1"
                             sx={{
                               fontWeight: 600,
                               color: 'text.secondary',
-                              backgroundColor: 'transparent',
-                              fontSize: '0.875rem',
-                              letterSpacing: '0.01em',
+                              mb: 1,
                             }}
                           >
-                            Recommendation
-                          </TableCell>
-                          <TableCell
+                            {label}
+                          </Typography>
+                          <Typography
                             sx={{
-                              fontWeight: 600,
-                              color: 'text.secondary',
-                              backgroundColor: 'transparent',
-                              fontSize: '0.875rem',
-                              letterSpacing: '0.01em',
+                              mb: 2,
+                              flexGrow: 1,
                             }}
                           >
-                            Product Idea
-                          </TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {[
-                          { label: 'Footwear', item: result.clothing.footwear },
-                          { label: 'Top', item: result.clothing.top },
-                          { label: 'Bottom', item: result.clothing.bottom },
-                          {
-                            label: 'Accessories',
-                            item: result.clothing.accessories,
-                          },
-                          {
-                            label: 'Weather Bonus',
-                            item: result.clothing.wildcard1,
-                          },
-                          {
-                            label: 'Style Boost',
-                            item: result.clothing.wildcard2,
-                          },
-                        ].map(({ label, item }) => (
-                          <TableRow
-                            key={label}
+                            {item.recommendation}
+                          </Typography>
+                          <Box
                             sx={{
-                              '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                              },
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
                             }}
                           >
-                            <TableCell sx={{ color: 'text.primary' }}>
-                              {item.recommendation}
-                            </TableCell>
-                            <TableCell>
-                              <MuiLink
-                                href={item.purchaseUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                sx={{
-                                  color: '#2196f3',
-                                  textDecoration: 'none',
-                                  '&:hover': {
-                                    textDecoration: 'underline',
-                                  },
-                                  fontWeight: 500,
-                                }}
-                              >
-                                {item.productTitle}
-                              </MuiLink>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                            <Typography
+                              component="span"
+                              sx={{
+                                color: 'text.secondary',
+                                fontSize: '0.875rem',
+                              }}
+                            >
+                              {baseUrl && `${baseUrl}:`}
+                            </Typography>
+                            <MuiLink
+                              href={item.purchaseUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              sx={{
+                                color: '#2196f3',
+                                textDecoration: 'none',
+                                fontWeight: 500,
+                                '&:hover': { textDecoration: 'underline' },
+                              }}
+                            >
+                              {item.productTitle}
+                            </MuiLink>
+                          </Box>
+                        </Box>
+                      )
+                    })}
                   </Box>
                 </Collapse>
               </Box>
@@ -686,6 +785,13 @@ const HomePage = () => {
           </Box>
         )}
       </Paper>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleUpload}
+        accept="image/*"
+        style={{ display: 'none' }}
+      />
     </Container>
   )
 }
