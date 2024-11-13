@@ -3,15 +3,15 @@ import { fetch } from 'cross-fetch'
 const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY
 
 export const getWeather = async ({
-  city,
-  state,
+  lat,
+  lon,
 }: {
-  city: string
-  state: string
+  lat: number
+  lon: number
 }) => {
   try {
     const response = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?q=${city},${state},US&units=imperial&appid=${OPENWEATHER_API_KEY}`
+      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=imperial&appid=${OPENWEATHER_API_KEY}`
     )
 
     if (!response.ok) {

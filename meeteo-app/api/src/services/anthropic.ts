@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getWeather } from 'src/services/weather/weather'
+import { db } from 'src/lib/db'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -13,11 +14,11 @@ export const sendMessage = async ({ message }: { message: string }) => {
       messages: [
         {
           role: 'user',
-          content: `Extract the intended US city and state from this description. Respond ONLY with a JSON object in the format {city: string, state: string}. If multiple valid interpretations exist, choose the most likely one.
-  
+          content: `Extract the intended location from this description. Respond ONLY with a JSON object in the format {place_name: string, lat: number, lon: number}. If multiple valid interpretations exist, choose the most likely one.
+
   Example input: "often world champs and home of the school that's better than yale"
-  Example output: {"city": "Cambridge", "state": "MA"}
-  
+  Example output: {"place_name": "Cambridge, MA", "lat": 42.3601, "lon": -71.0589}
+
   Input: ${message}`,
         },
       ],
@@ -36,7 +37,7 @@ export const sendMessage = async ({ message }: { message: string }) => {
         {
           role: 'user',
           content: `Given the current weather conditions: ${weatherData.main.temp}°F, feels like ${weatherData.main.feels_like}°F, ${weatherData.weather[0].description}, ${weatherData.main.humidity}% humidity.
-  
+
   Please suggest appropriate clothing items in the following JSON format:
   {
     "footwear": "string",
@@ -46,7 +47,7 @@ export const sendMessage = async ({ message }: { message: string }) => {
     "wildcard1": "string",
     "wildcard2": "string"
   }
-  
+
   Make suggestions practical and specific to the weather conditions.`,
         },
       ],
@@ -54,9 +55,23 @@ export const sendMessage = async ({ message }: { message: string }) => {
 
     const clothingSuggestions = JSON.parse(clothingResponse.content[0].text)
 
+    // Store the search in the database
+    await db.query.create({
+      data: {
+        message,
+        location: locationData.place_name,
+        temperature: weatherData.main.temp,
+        conditions: weatherData.weather[0].description,
+        clothing: clothingSuggestions,
+      },
+    })
+
     return {
-      city: locationData.city,
-      state: locationData.state,
+      location: {
+        place_name: locationData.place_name,
+        lat: locationData.lat,
+        lon: locationData.lon,
+      },
       weather: {
         temp: weatherData.main.temp,
         feels_like: weatherData.main.feels_like,

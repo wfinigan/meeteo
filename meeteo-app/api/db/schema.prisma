@@ -5,7 +5,7 @@
 // https://www.prisma.io/docs/orm/prisma-migrate
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -15,9 +15,11 @@ generator client {
 }
 
 model Query {
-  id        Int      @id @default(autoincrement())
-  message   String
-  city      String
-  state     String
-  createdAt DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  message     String
+  location    String
+  temperature Float
+  conditions  String
+  clothing    Json
+  createdAt   DateTime @default(now())
 }

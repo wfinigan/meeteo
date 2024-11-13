@@ -21,8 +21,11 @@ import { Link, routes } from '@redwoodjs/router'
 const SEND_MESSAGE_MUTATION = gql`
   mutation SendMessageMutation($message: String!) {
     sendMessage(message: $message) {
-      city
-      state
+      location {
+        place_name
+        lat
+        lon
+      }
       weather {
         temp
         feels_like
@@ -212,7 +215,10 @@ const HomePage = () => {
           <Box sx={{ mt: 4 }}>
             <Paper elevation={1} sx={{ p: 4, mb: 4, borderRadius: 2 }}>
               <Typography variant="h4" component="h1" gutterBottom>
-                {result.city}, {result.state}
+                {result.location.place_name}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                {result.location.lat.toFixed(4)}°N, {result.location.lon.toFixed(4)}°W
               </Typography>
 
               <Grid container spacing={3} sx={{ mb: 4 }}>

@@ -1,12 +1,18 @@
 export const schema = gql`
+  type Location {
+    place_name: String!
+    lat: Float!
+    lon: Float!
+  }
+
   type Weather {
     temp: Float!
     feels_like: Float!
-    humidity: Int!
+    humidity: Float!
     description: String!
   }
 
-  type ClothingSuggestions {
+  type Clothing {
     footwear: String!
     top: String!
     bottom: String!
@@ -16,13 +22,16 @@ export const schema = gql`
   }
 
   type LocationWithWeather {
-    city: String!
-    state: String!
+    location: Location!
     weather: Weather!
-    clothing: ClothingSuggestions!
+    clothing: Clothing!
   }
 
   type Mutation {
     sendMessage(message: String!): LocationWithWeather! @skipAuth
+  }
+
+  type Query {
+    _empty: String @skipAuth
   }
 `
