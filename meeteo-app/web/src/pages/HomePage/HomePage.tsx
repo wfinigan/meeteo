@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAuth } from 'src/auth'
 
 import CloudIcon from '@mui/icons-material/Cloud'
 import ThermostatIcon from '@mui/icons-material/Thermostat'
@@ -29,6 +30,7 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import { Form, Submit } from '@redwoodjs/forms'
 import { Link, routes } from '@redwoodjs/router'
 import { useMutation } from '@redwoodjs/web'
+import Sidebar from 'src/components/Sidebar/Sidebar'
 
 type UnsplashImage = {
   url: string;
@@ -111,6 +113,30 @@ const SEND_MESSAGE_MUTATION = gql`
 `
 
 const HomePage = () => {
+
+  const { isAuthenticated, signUp, currentUser, logOut } = useAuth()
+
+  const handleSignUp = async () => {
+    try {
+      await signUp({
+        redirectTo: window.location.origin,
+        appState: {
+          targetUrl: window.location.pathname
+        }
+      })
+    } catch (error) {
+      console.error('Auth error:', error)
+    }
+  }
+
+  const handleLogOut = async () => {
+    try {
+      await logOut({ returnTo: window.location.origin })
+    } catch (error) {
+      console.error('Error logging out:', error)
+    }
+  }
+
   const [sendMessage] = useMutation(SEND_MESSAGE_MUTATION)
   const [result, setResult] = useState(null)
   const [inputValue, setInputValue] = useState('')
@@ -141,6 +167,42 @@ const HomePage = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Sidebar />
+      {isAuthenticated && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 16,
+            right: 24,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+          }}
+        >
+          <Typography
+            sx={{
+              color: 'text.primary',
+              fontSize: '1rem',
+              fontWeight: 500,
+            }}
+          >
+            {currentUser?.name || 'User'}
+          </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleLogOut}
+            sx={{
+              textTransform: 'none',
+              borderColor: 'rgba(0, 0, 0, 0.23)',
+              color: 'text.primary',
+            }}
+          >
+            Log Out
+          </Button>
+        </Box>
+      )}
+
       <Paper elevation={0} sx={{ p: 4, bgcolor: 'transparent' }}>
         <Box
           sx={{
@@ -197,6 +259,31 @@ const HomePage = () => {
             </Link>
           </Typography>
         </Box>
+
+        {!isAuthenticated && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+            <Button
+              variant="contained"
+              onClick={handleSignUp}
+              sx={{
+                backgroundColor: '#2196f3',
+                color: 'white',
+                textTransform: 'none',
+                fontSize: '1rem',
+                fontWeight: 500,
+                px: 4,
+                py: 1,
+                borderRadius: '8px',
+                '&:hover': {
+                  backgroundColor: '#1976d2',
+                },
+              }}
+            >
+              Sign Up
+            </Button>
+          </Box>
+        )}
+
         <Form onSubmit={onSubmit}>
           <Box
             sx={{

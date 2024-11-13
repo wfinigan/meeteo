@@ -23,3 +23,12 @@ model Query {
   clothing    Json
   createdAt   DateTime @default(now())
 }
+
+model Submission {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  location  String
+  weather   Json
+  clothing  Json
+  createdAt DateTime @default(now())
+}

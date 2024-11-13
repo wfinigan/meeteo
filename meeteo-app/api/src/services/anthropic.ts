@@ -1,8 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk'
 import fetch from 'cross-fetch'
 
+import { context } from '@redwoodjs/graphql-server'
+
 import { db } from 'src/lib/db'
 import { searchGoogleProduct } from 'src/services/google/google'
+import { createSubmission } from 'src/services/submissions/submissions'
 import { getWeather } from 'src/services/weather/weather'
 
 const anthropic = new Anthropic({
@@ -10,7 +13,8 @@ const anthropic = new Anthropic({
 })
 
 const UNSPLASH_API_ENDPOINT = 'https://api.unsplash.com/search/photos'
-const DUMMY_IMAGE_URL = 'https://images.quince.com/5MyyAmmPODiCEOcLBtUJto/1f712d93c1acf0e6b0476ed18277fed5/W-JKT-3-BRN_0582.jpg?w=1600&q=50&h=2000&fm=webp&reqOrigin=website-ssg'
+const DUMMY_IMAGE_URL =
+  'https://images.quince.com/5MyyAmmPODiCEOcLBtUJto/1f712d93c1acf0e6b0476ed18277fed5/W-JKT-3-BRN_0582.jpg?w=1600&q=50&h=2000&fm=webp&reqOrigin=website-ssg'
 
 const getUnsplashSearchTerm = async (description: string) => {
   try {
@@ -171,9 +175,18 @@ export const sendMessage = async ({ message }: { message: string }) => {
       getImageUrl(clothingDescriptions.wildcard2),
     ])
 
-    return {
-      location: locationData,
-      weather: mappedWeatherData,
+    const result = {
+      location: {
+        place_name: locationData.place_name,
+        lat: locationData.lat,
+        lon: locationData.lon,
+      },
+      weather: {
+        temp: weatherData.main.temp,
+        feels_like: weatherData.main.feels_like,
+        humidity: weatherData.main.humidity,
+        description: weatherData.weather[0].description,
+      },
       clothing: {
         footwear: {
           recommendation: clothingDescriptions.footwear,
@@ -225,7 +238,28 @@ export const sendMessage = async ({ message }: { message: string }) => {
         },
       },
     }
+
+    // Create submission if user is authenticated
+    if (context.currentUser?.sub) {
+      try {
+        await createSubmission({
+          location: locationData.place_name,
+          weather: {
+            temp: weatherData.main.temp,
+            feels_like: weatherData.main.feels_like,
+            humidity: weatherData.main.humidity,
+            description: weatherData.weather[0].description,
+          },
+          clothing: result.clothing,
+        })
+      } catch (error) {
+        console.error('Error creating submission:', error)
+      }
+    }
+
+    return result
   } catch (error) {
+    console.error('Error in sendMessage:', error)
     throw error
   }
 }
