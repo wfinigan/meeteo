@@ -19,6 +19,15 @@ const cleanProductTitle = (title: string) => {
   )
 }
 
+// Move this function to the top, before searchGoogleProduct
+const getFallbackProduct = (query: string) => {
+  const encodedQuery = encodeURIComponent(query)
+  return {
+    productTitle: `Shop for ${query}`,
+    purchaseUrl: `https://www.amazon.com/s?k=${encodedQuery}+clothing`,
+  }
+}
+
 export const searchGoogleProduct = async (query: string) => {
   try {
     if (!GOOGLE_API_KEY || !GOOGLE_SEARCH_ENGINE_ID) {
@@ -75,14 +84,24 @@ export const searchGoogleProduct = async (query: string) => {
   }
 }
 
-// Fallback function that returns a generic shopping URL
-const getFallbackProduct = (query: string) => {
-  // Encode the query for use in URLs
-  const encodedQuery = encodeURIComponent(query)
+export const searchGoogleImage = async (query: string) => {
+  try {
+    const response = await fetch(
+      `https://customsearch.googleapis.com/customsearch/v1?q=${encodeURIComponent(
+        query
+      )}&cx=${process.env.GOOGLE_SEARCH_ENGINE_ID}&key=${
+        process.env.GOOGLE_API_KEY
+      }&searchType=image&num=1`
+    )
 
-  // Return a search on a major shopping site
-  return {
-    productTitle: `Shop for ${query}`,
-    purchaseUrl: `https://www.amazon.com/s?k=${encodedQuery}+clothing`,
+    if (!response.ok) {
+      throw new Error('Google Image Search API error')
+    }
+
+    const data = await response.json()
+    return data.items?.[0]
+  } catch (error) {
+    console.error('Google Image Search error:', error)
+    return null
   }
 }

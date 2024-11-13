@@ -4,7 +4,10 @@ import fetch from 'cross-fetch'
 import { context } from '@redwoodjs/graphql-server'
 
 import { db } from 'src/lib/db'
-import { searchGoogleProduct } from 'src/services/google/google'
+import {
+  searchGoogleProduct,
+  searchGoogleImage,
+} from 'src/services/google/google'
 import { createSubmission } from 'src/services/submissions/submissions'
 import { getWeather } from 'src/services/weather/weather'
 
@@ -56,10 +59,11 @@ const getImageUrl = async (description: string) => {
     )
 
     if (!response.ok) {
-      console.error('Unsplash API error:', response.statusText)
+      console.log('Falling back to Google Images due to Unsplash API error')
+      const googleImage = await searchGoogleImage(searchTerm)
       return {
-        image: DUMMY_IMAGE_URL,
-        photographer: 'Unknown',
+        image: googleImage?.link || DUMMY_IMAGE_URL,
+        photographer: 'Google Images',
         photographerUrl: '#',
         imageId: '',
       }
@@ -69,9 +73,11 @@ const getImageUrl = async (description: string) => {
     const photo = data.results?.[0]
 
     if (!photo) {
+      console.log('No Unsplash results, falling back to Google Images')
+      const googleImage = await searchGoogleImage(searchTerm)
       return {
-        image: DUMMY_IMAGE_URL,
-        photographer: 'Unknown',
+        image: googleImage?.link || DUMMY_IMAGE_URL,
+        photographer: 'Google Images',
         photographerUrl: '#',
         imageId: '',
       }
@@ -84,12 +90,24 @@ const getImageUrl = async (description: string) => {
       imageId: photo.id,
     }
   } catch (error) {
-    console.error('Unsplash API error:', error)
-    return {
-      image: DUMMY_IMAGE_URL,
-      photographer: 'Unknown',
-      photographerUrl: '#',
-      imageId: '',
+    console.error('Image API error:', error)
+    try {
+      console.log('Attempting Google Images fallback after error')
+      const googleImage = await searchGoogleImage(description)
+      return {
+        image: googleImage?.link || DUMMY_IMAGE_URL,
+        photographer: 'Google Images',
+        photographerUrl: '#',
+        imageId: '',
+      }
+    } catch (fallbackError) {
+      console.error('Google Images fallback failed:', fallbackError)
+      return {
+        image: DUMMY_IMAGE_URL,
+        photographer: 'Unknown',
+        photographerUrl: '#',
+        imageId: '',
+      }
     }
   }
 }

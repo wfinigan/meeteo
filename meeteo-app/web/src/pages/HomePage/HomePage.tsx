@@ -388,8 +388,8 @@ const HomePage = () => {
                   color="text.secondary"
                   sx={{ mb: 3 }}
                 >
-                  {result.location.lat.toFixed(4)}°N,{' '}
-                  {result.location.lon.toFixed(4)}°W
+                  {result.location.lat.toFixed(2)}°N,{' '}
+                  {result.location.lon.toFixed(2)}°W
                 </Typography>
               )}
 
@@ -412,14 +412,14 @@ const HomePage = () => {
                       </Box>
                       <Box>
                         <Typography component="div" variant="body1">
-                          {result.weather.temp}°F
+                          {Math.round(result.weather.temp)}°F
                         </Typography>
                         <Typography
                           component="div"
                           variant="body2"
                           color="text.secondary"
                         >
-                          Feels like: {result.weather.feels_like}°F
+                          Feels like: {Math.round(result.weather.feels_like)}°F
                         </Typography>
                       </Box>
                     </CardContent>
@@ -472,7 +472,7 @@ const HomePage = () => {
               </Grid>
 
               <Typography variant="h5" component="h2" sx={{ mb: 3 }}>
-                Suggested Outfit
+                Your outfit mood board
               </Typography>
               <Box
                 sx={{
@@ -526,38 +526,41 @@ const HomePage = () => {
                           }
                         }}
                       />
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          position: 'absolute',
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          bgcolor: 'rgba(0, 0, 0, 0.6)',
-                          color: 'white',
-                          p: 1,
-                          textAlign: 'center',
-                        }}
-                      >
-                        Photo by{' '}
-                        <MuiLink
-                          href={item.item.photographerUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          sx={{ color: 'white' }}
-                        >
-                          {item.item.photographer}
-                        </MuiLink>{' '}
-                        on{' '}
-                        <MuiLink
-                          href="https://unsplash.com"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          sx={{ color: 'white' }}
-                        >
-                          Unsplash
-                        </MuiLink>
-                      </Typography>
+                      {item.item.photographer &&
+                        item.item.photographerUrl?.includes('unsplash.com') && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              position: 'absolute',
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              bgcolor: 'rgba(0, 0, 0, 0.6)',
+                              color: 'white',
+                              p: 1,
+                              textAlign: 'center',
+                            }}
+                          >
+                            Photo by{' '}
+                            <MuiLink
+                              href={item.item.photographerUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              sx={{ color: 'white' }}
+                            >
+                              {item.item.photographer}
+                            </MuiLink>{' '}
+                            on{' '}
+                            <MuiLink
+                              href="https://unsplash.com"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              sx={{ color: 'white' }}
+                            >
+                              Unsplash
+                            </MuiLink>
+                          </Typography>
+                        )}
                     </Box>
                   </Card>
                 ))}
@@ -574,7 +577,7 @@ const HomePage = () => {
                   onClick={() => setDetailsOpen(!detailsOpen)}
                 >
                   <Typography variant="h5" component="h2">
-                    Item Details
+                    Recreate the fit
                   </Typography>
                   <IconButton
                     aria-label="toggle details"
