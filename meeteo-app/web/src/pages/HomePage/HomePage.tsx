@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useAuth } from 'src/auth'
 
 import CloudIcon from '@mui/icons-material/Cloud'
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import ThermostatIcon from '@mui/icons-material/Thermostat'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import {
@@ -24,18 +25,18 @@ import {
   IconButton,
 } from '@mui/material'
 import Grid from '@mui/material/Grid2'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 
 import { Form, Submit } from '@redwoodjs/forms'
 import { Link, routes } from '@redwoodjs/router'
 import { useMutation } from '@redwoodjs/web'
+
+import { useAuth } from 'src/auth'
 import Sidebar from 'src/components/Sidebar/Sidebar'
 
 type UnsplashImage = {
-  url: string;
-  photographerName: string;
-  photographerUrl: string;
+  url: string
+  photographerName: string
+  photographerUrl: string
 }
 
 const SEND_MESSAGE_MUTATION = gql`
@@ -113,7 +114,6 @@ const SEND_MESSAGE_MUTATION = gql`
 `
 
 const HomePage = () => {
-
   const { isAuthenticated, signUp, currentUser, logOut } = useAuth()
 
   const handleSignUp = async () => {
@@ -121,8 +121,8 @@ const HomePage = () => {
       await signUp({
         redirectTo: window.location.origin,
         appState: {
-          targetUrl: window.location.pathname
-        }
+          targetUrl: window.location.pathname,
+        },
       })
     } catch (error) {
       console.error('Auth error:', error)
@@ -143,6 +143,7 @@ const HomePage = () => {
   const [loading, setLoading] = useState(false)
   const [showExample, setShowExample] = useState(true)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [selectedSubmission, setSelectedSubmission] = useState(null)
 
   const resetState = () => {
     setResult(null)
@@ -165,9 +166,22 @@ const HomePage = () => {
     }
   }
 
+  const handleSubmissionSelect = (submission) => {
+    setResult({
+      location: {
+        place_name: submission.location,
+        lat: submission.lat,
+        lon: submission.lon,
+      },
+      weather: submission.weather,
+      clothing: submission.clothing,
+    })
+    setShowExample(false)
+  }
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Sidebar />
+      <Sidebar onSubmissionSelect={handleSubmissionSelect} />
       {isAuthenticated && (
         <Box
           sx={{
@@ -368,10 +382,16 @@ const HomePage = () => {
               <Typography variant="h4" component="h1" gutterBottom>
                 {result.location.place_name}
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                {result.location.lat.toFixed(4)}°N,{' '}
-                {result.location.lon.toFixed(4)}°W
-              </Typography>
+              {result.location.lat !== 0 && result.location.lon !== 0 && (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 3 }}
+                >
+                  {result.location.lat.toFixed(4)}°N,{' '}
+                  {result.location.lon.toFixed(4)}°W
+                </Typography>
+              )}
 
               <Grid container spacing={3} sx={{ mb: 4 }}>
                 <Grid xs={12} sm={4}>
@@ -494,12 +514,16 @@ const HomePage = () => {
                           display: 'block',
                         }}
                         onLoad={() => {
-                          // Trigger download event when image is loaded
-                          fetch(`https://api.unsplash.com/photos/${item.item.imageId}/download`, {
-                            headers: {
-                              Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`,
-                            },
-                          })
+                          if (!selectedSubmission && item.item.imageId) {
+                            fetch(
+                              `https://api.unsplash.com/photos/${item.item.imageId}/download`,
+                              {
+                                headers: {
+                                  Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`,
+                                },
+                              }
+                            )
+                          }
                         }}
                       />
                       <Typography
@@ -557,19 +581,25 @@ const HomePage = () => {
                     size="small"
                     sx={{ ml: 1 }}
                   >
-                    {detailsOpen ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                    {detailsOpen ? (
+                      <KeyboardArrowUpIcon />
+                    ) : (
+                      <KeyboardArrowDownIcon />
+                    )}
                   </IconButton>
                 </Box>
 
                 <Collapse in={detailsOpen}>
                   <Box sx={{ overflowX: 'auto' }}>
-                    <Table sx={{
-                      minWidth: 650,
-                      '& th, & td': {
-                        borderBottom: '1px solid rgba(224, 224, 224, 0.4)',
-                        padding: '16px',
-                      },
-                    }}>
+                    <Table
+                      sx={{
+                        minWidth: 650,
+                        '& th, & td': {
+                          borderBottom: '1px solid rgba(224, 224, 224, 0.4)',
+                          padding: '16px',
+                        },
+                      }}
+                    >
                       <TableHead>
                         <TableRow>
                           <TableCell
@@ -601,9 +631,18 @@ const HomePage = () => {
                           { label: 'Footwear', item: result.clothing.footwear },
                           { label: 'Top', item: result.clothing.top },
                           { label: 'Bottom', item: result.clothing.bottom },
-                          { label: 'Accessories', item: result.clothing.accessories },
-                          { label: 'Weather Bonus', item: result.clothing.wildcard1 },
-                          { label: 'Style Boost', item: result.clothing.wildcard2 },
+                          {
+                            label: 'Accessories',
+                            item: result.clothing.accessories,
+                          },
+                          {
+                            label: 'Weather Bonus',
+                            item: result.clothing.wildcard1,
+                          },
+                          {
+                            label: 'Style Boost',
+                            item: result.clothing.wildcard2,
+                          },
                         ].map(({ label, item }) => (
                           <TableRow
                             key={label}

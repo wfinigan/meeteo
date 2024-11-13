@@ -24,7 +24,9 @@ const getUnsplashSearchTerm = async (description: string) => {
       messages: [
         {
           role: 'user',
-          content: `Write a search term for unsplash to find images inspired by the description. Be as specific as possible and try to get unsplash to give clothing results only. Respond with just the search term, no explanation or quotes.
+          content: `Write a search term for unsplash to find images inspired by the description. Try to get unsplash to give clothing results only. Respond with just the search term, no explanation or quotes. Use a term that is highly likely to exist as an image on unsplash and aligns well with the description.
+          For example, if the description is "A lightweight, moisture-wicking base layer" you might instead search for "wicking Crewneck".
+          Or if the description is "A pair of blue jeans" you might instead search for "blue jeans".
 
 Description: ${description}`,
         },
@@ -244,6 +246,8 @@ export const sendMessage = async ({ message }: { message: string }) => {
       try {
         await createSubmission({
           location: locationData.place_name,
+          lat: locationData.lat,
+          lon: locationData.lon,
           weather: {
             temp: weatherData.main.temp,
             feels_like: weatherData.main.feels_like,

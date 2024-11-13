@@ -25,13 +25,20 @@ const SUBMISSIONS_QUERY = gql`
     submissions {
       id
       location
+      lat
+      lon
       weather
+      clothing
       createdAt
     }
   }
 `
 
-const Sidebar = () => {
+type SidebarProps = {
+  onSubmissionSelect: (submission: any) => void
+}
+
+const Sidebar = ({ onSubmissionSelect }: SidebarProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const { isAuthenticated, signUp } = useAuth()
@@ -60,6 +67,11 @@ const Sidebar = () => {
     })
   }
 
+  const handleSubmissionClick = (submission) => {
+    onSubmissionSelect(submission)
+    setIsOpen(false) // Close sidebar after selection
+  }
+
   return (
     <>
       <IconButton
@@ -83,36 +95,13 @@ const Sidebar = () => {
                 data.submissions.map((submission) => (
                   <Box key={submission.id}>
                     <ListItemButton
-                      onClick={() =>
-                        setExpandedId(
-                          expandedId === submission.id ? null : submission.id
-                        )
-                      }
+                      onClick={() => handleSubmissionClick(submission)}
                     >
                       <ListItemText
                         primary={submission.location}
                         secondary={formatDate(submission.createdAt)}
                       />
-                      {expandedId === submission.id ? (
-                        <ExpandLess />
-                      ) : (
-                        <ExpandMore />
-                      )}
                     </ListItemButton>
-                    <Collapse
-                      in={expandedId === submission.id}
-                      timeout="auto"
-                      unmountOnExit
-                    >
-                      <Box sx={{ p: 2, bgcolor: 'background.paper' }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Temperature: {submission.weather.temp}°F
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Conditions: {submission.weather.description}
-                        </Typography>
-                      </Box>
-                    </Collapse>
                   </Box>
                 ))
               ) : (

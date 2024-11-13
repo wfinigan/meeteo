@@ -12,6 +12,8 @@ export const submissions: QueryResolvers['submissions'] = () => {
 
 export const createSubmission: MutationResolvers['createSubmission'] = ({
   location,
+  lat,
+  lon,
   weather,
   clothing,
 }) => {
@@ -20,6 +22,8 @@ export const createSubmission: MutationResolvers['createSubmission'] = ({
     data: {
       userId: context.currentUser?.sub,
       location,
+      lat,
+      lon,
       weather,
       clothing,
     },
