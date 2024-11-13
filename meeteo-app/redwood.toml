@@ -10,12 +10,14 @@
   port = 8910
   apiUrl = "/.netlify/functions"
   includeEnvironmentVariables = [
-    # Add any ENV vars that should be available to the web side to this array
-    # See https://redwoodjs.com/docs/environment-variables#web
+    "AUTH0_DOMAIN",
+    "AUTH0_CLIENT_ID",
+    "AUTH0_REDIRECT_URI",
+    "AUTH0_AUDIENCE"
   ]
 [api]
   port = 8911
-  includeEnvironmentVariables = ["ANTHROPIC_API_KEY", "OPENWEATHER_API_KEY"]
+  includeEnvironmentVariables = ["ANTHROPIC_API_KEY", "OPENWEATHER_API_KEY", "AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_REDIRECT_URI", "AUTH0_AUDIENCE", "UNSPLASH_ACCESS_KEY"]
 [browser]
   open = true
 [notifications]

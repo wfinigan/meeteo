@@ -1,11 +1,116 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { getWeather } from 'src/services/weather/weather'
+import fetch from 'cross-fetch'
+
+import { context } from '@redwoodjs/graphql-server'
+
 import { db } from 'src/lib/db'
-import { searchGoogleProduct } from 'src/services/google/google'
+import {
+  searchGoogleProduct,
+  searchGoogleImage,
+} from 'src/services/google/google'
+import { createSubmission } from 'src/services/submissions/submissions'
+import { getWeather } from 'src/services/weather/weather'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
+
+const UNSPLASH_API_ENDPOINT = 'https://api.unsplash.com/search/photos'
+const DUMMY_IMAGE_URL =
+  'https://images.quince.com/5MyyAmmPODiCEOcLBtUJto/1f712d93c1acf0e6b0476ed18277fed5/W-JKT-3-BRN_0582.jpg?w=1600&q=50&h=2000&fm=webp&reqOrigin=website-ssg'
+
+const getUnsplashSearchTerm = async (description: string) => {
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-3-sonnet-20240229',
+      max_tokens: 100,
+      messages: [
+        {
+          role: 'user',
+          content: `Write a search term for unsplash to find images inspired by the description. Try to get unsplash to give clothing results only. Respond with just the search term, no explanation or quotes. Use a term that is highly likely to exist as an image on unsplash and aligns well with the description.
+          For example, if the description is "A lightweight, moisture-wicking base layer" you might instead search for "wicking Crewneck".
+          Or if the description is "A pair of blue jeans" you might instead search for "blue jeans".
+
+Description: ${description}`,
+        },
+      ],
+    })
+    return response.content[0].text.trim()
+  } catch (error) {
+    console.error('Error getting Unsplash search term:', error)
+    return description
+  }
+}
+
+// Function to get Unsplash image
+const getImageUrl = async (description: string) => {
+  try {
+    const searchTerm = await getUnsplashSearchTerm(description)
+    console.log(`Original description: ${description}`)
+    console.log(`Unsplash search term: ${searchTerm}`)
+
+    const response = await fetch(
+      `${UNSPLASH_API_ENDPOINT}?query=${encodeURIComponent(searchTerm)}&per_page=1`,
+      {
+        headers: {
+          Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`,
+        },
+      }
+    )
+
+    if (!response.ok) {
+      console.log('Falling back to Google Images due to Unsplash API error')
+      const googleImage = await searchGoogleImage(searchTerm)
+      return {
+        image: googleImage?.link || DUMMY_IMAGE_URL,
+        photographer: 'Google Images',
+        photographerUrl: '#',
+        imageId: '',
+      }
+    }
+
+    const data = await response.json()
+    const photo = data.results?.[0]
+
+    if (!photo) {
+      console.log('No Unsplash results, falling back to Google Images')
+      const googleImage = await searchGoogleImage(searchTerm)
+      return {
+        image: googleImage?.link || DUMMY_IMAGE_URL,
+        photographer: 'Google Images',
+        photographerUrl: '#',
+        imageId: '',
+      }
+    }
+
+    return {
+      image: photo.urls.regular,
+      photographer: photo.user.name,
+      photographerUrl: photo.user.links.html,
+      imageId: photo.id,
+    }
+  } catch (error) {
+    console.error('Image API error:', error)
+    try {
+      console.log('Attempting Google Images fallback after error')
+      const googleImage = await searchGoogleImage(description)
+      return {
+        image: googleImage?.link || DUMMY_IMAGE_URL,
+        photographer: 'Google Images',
+        photographerUrl: '#',
+        imageId: '',
+      }
+    } catch (fallbackError) {
+      console.error('Google Images fallback failed:', fallbackError)
+      return {
+        image: DUMMY_IMAGE_URL,
+        photographer: 'Unknown',
+        photographerUrl: '#',
+        imageId: '',
+      }
+    }
+  }
+}
 
 export const sendMessage = async ({ message }: { message: string }) => {
   try {
@@ -26,27 +131,30 @@ export const sendMessage = async ({ message }: { message: string }) => {
     })
 
     const locationData = JSON.parse(response.content[0].text)
-
-    // Get weather data
     const weatherData = await getWeather(locationData)
+    const mappedWeatherData = {
+      temp: weatherData.main.temp,
+      feels_like: weatherData.main.feels_like,
+      humidity: weatherData.main.humidity,
+      description: weatherData.weather[0].description,
+    }
 
-    // Get clothing suggestions
-    const clothingResponse = await anthropic.messages.create({
+    const clothingDescriptionsResponse = await anthropic.messages.create({
       model: 'claude-3-sonnet-20240229',
       max_tokens: 1024,
       messages: [
         {
           role: 'user',
-          content: `Given the current weather conditions: ${weatherData.main.temp}°F, feels like ${weatherData.main.feels_like}°F, ${weatherData.weather[0].description}, ${weatherData.main.humidity}% humidity.
+          content: `Given the current weather conditions: ${mappedWeatherData.temp}°F, feels like ${mappedWeatherData.feels_like}°F, ${mappedWeatherData.description}, ${mappedWeatherData.humidity}% humidity.
 
-  Please suggest appropriate clothing items in the following JSON format:
+  Suggest appropriate clothing items. Format response as a JSON object:
   {
-    "footwear": "string",
-    "top": "string",
-    "bottom": "string",
-    "accessories": "string",
-    "wildcard1": "string",
-    "wildcard2": "string"
+    "footwear": "description of recommended footwear",
+    "top": "description of recommended top",
+    "bottom": "description of recommended bottom",
+    "accessories": "description of recommended accessories",
+    "wildcard1": "description of another weather-appropriate item",
+    "wildcard2": "description of another weather-appropriate item"
   }
 
   Make suggestions practical and specific to the weather conditions.`,
@@ -54,16 +162,24 @@ export const sendMessage = async ({ message }: { message: string }) => {
       ],
     })
 
-    const clothingDescriptions = JSON.parse(clothingResponse.content[0].text)
+    const clothingDescriptions = JSON.parse(
+      clothingDescriptionsResponse.content[0].text
+    )
 
-    // Fetch Google Shopping products for each clothing item in parallel
+    // Fetch both Google Shopping products and Unsplash images in parallel
     const [
       footwear,
       top,
       bottom,
       accessories,
       wildcard1,
-      wildcard2
+      wildcard2,
+      footwearImg,
+      topImg,
+      bottomImg,
+      accessoriesImg,
+      wildcard1Img,
+      wildcard2Img,
     ] = await Promise.all([
       searchGoogleProduct(clothingDescriptions.footwear),
       searchGoogleProduct(clothingDescriptions.top),
@@ -71,47 +187,15 @@ export const sendMessage = async ({ message }: { message: string }) => {
       searchGoogleProduct(clothingDescriptions.accessories),
       searchGoogleProduct(clothingDescriptions.wildcard1),
       searchGoogleProduct(clothingDescriptions.wildcard2),
+      getImageUrl(clothingDescriptions.footwear),
+      getImageUrl(clothingDescriptions.top),
+      getImageUrl(clothingDescriptions.bottom),
+      getImageUrl(clothingDescriptions.accessories),
+      getImageUrl(clothingDescriptions.wildcard1),
+      getImageUrl(clothingDescriptions.wildcard2),
     ])
 
-    const clothingSuggestions = {
-      footwear: {
-        recommendation: clothingDescriptions.footwear,
-        ...footwear,
-      },
-      top: {
-        recommendation: clothingDescriptions.top,
-        ...top,
-      },
-      bottom: {
-        recommendation: clothingDescriptions.bottom,
-        ...bottom,
-      },
-      accessories: {
-        recommendation: clothingDescriptions.accessories,
-        ...accessories,
-      },
-      wildcard1: {
-        recommendation: clothingDescriptions.wildcard1,
-        ...wildcard1,
-      },
-      wildcard2: {
-        recommendation: clothingDescriptions.wildcard2,
-        ...wildcard2,
-      },
-    }
-
-    // Store the search in the database
-    await db.query.create({
-      data: {
-        message,
-        location: locationData.place_name,
-        temperature: weatherData.main.temp,
-        conditions: weatherData.weather[0].description,
-        clothing: clothingSuggestions,
-      },
-    })
-
-    return {
+    const result = {
       location: {
         place_name: locationData.place_name,
         lat: locationData.lat,
@@ -123,10 +207,81 @@ export const sendMessage = async ({ message }: { message: string }) => {
         humidity: weatherData.main.humidity,
         description: weatherData.weather[0].description,
       },
-      clothing: clothingSuggestions,
+      clothing: {
+        footwear: {
+          recommendation: clothingDescriptions.footwear,
+          ...footwear,
+          image: footwearImg.image,
+          photographer: footwearImg.photographer,
+          photographerUrl: footwearImg.photographerUrl,
+          imageId: footwearImg.imageId,
+        },
+        top: {
+          recommendation: clothingDescriptions.top,
+          ...top,
+          image: topImg.image,
+          photographer: topImg.photographer,
+          photographerUrl: topImg.photographerUrl,
+          imageId: topImg.imageId,
+        },
+        bottom: {
+          recommendation: clothingDescriptions.bottom,
+          ...bottom,
+          image: bottomImg.image,
+          photographer: bottomImg.photographer,
+          photographerUrl: bottomImg.photographerUrl,
+          imageId: bottomImg.imageId,
+        },
+        accessories: {
+          recommendation: clothingDescriptions.accessories,
+          ...accessories,
+          image: accessoriesImg.image,
+          photographer: accessoriesImg.photographer,
+          photographerUrl: accessoriesImg.photographerUrl,
+          imageId: accessoriesImg.imageId,
+        },
+        wildcard1: {
+          recommendation: clothingDescriptions.wildcard1,
+          ...wildcard1,
+          image: wildcard1Img.image,
+          photographer: wildcard1Img.photographer,
+          photographerUrl: wildcard1Img.photographerUrl,
+          imageId: wildcard1Img.imageId,
+        },
+        wildcard2: {
+          recommendation: clothingDescriptions.wildcard2,
+          ...wildcard2,
+          image: wildcard2Img.image,
+          photographer: wildcard2Img.photographer,
+          photographerUrl: wildcard2Img.photographerUrl,
+          imageId: wildcard2Img.imageId,
+        },
+      },
     }
+
+    // Create submission if user is authenticated
+    if (context.currentUser?.sub) {
+      try {
+        await createSubmission({
+          location: locationData.place_name,
+          lat: locationData.lat,
+          lon: locationData.lon,
+          weather: {
+            temp: weatherData.main.temp,
+            feels_like: weatherData.main.feels_like,
+            humidity: weatherData.main.humidity,
+            description: weatherData.weather[0].description,
+          },
+          clothing: result.clothing,
+        })
+      } catch (error) {
+        console.error('Error creating submission:', error)
+      }
+    }
+
+    return result
   } catch (error) {
-    console.error('API Error:', error)
+    console.error('Error in sendMessage:', error)
     throw error
   }
 }

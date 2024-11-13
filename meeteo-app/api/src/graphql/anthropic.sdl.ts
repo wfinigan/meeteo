@@ -16,6 +16,10 @@ export const schema = gql`
     recommendation: String!
     productTitle: String!
     purchaseUrl: String!
+    image: String!
+    photographer: String!
+    photographerUrl: String!
+    imageId: String!
   }
 
   type Clothing {

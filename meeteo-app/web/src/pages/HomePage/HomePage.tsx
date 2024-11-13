@@ -1,6 +1,10 @@
-import { Form, Submit } from '@redwoodjs/forms'
-import { useMutation } from '@redwoodjs/web'
 import { useState } from 'react'
+
+import CloudIcon from '@mui/icons-material/Cloud'
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+import ThermostatIcon from '@mui/icons-material/Thermostat'
+import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import {
   TextField,
   Container,
@@ -21,12 +25,19 @@ import {
   IconButton,
 } from '@mui/material'
 import Grid from '@mui/material/Grid2'
-import ThermostatIcon from '@mui/icons-material/Thermostat'
-import WaterDropIcon from '@mui/icons-material/WaterDrop'
-import CloudIcon from '@mui/icons-material/Cloud'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+
+import { Form, Submit } from '@redwoodjs/forms'
 import { Link, routes } from '@redwoodjs/router'
+import { useMutation } from '@redwoodjs/web'
+
+import { useAuth } from 'src/auth'
+import Sidebar from 'src/components/Sidebar/Sidebar'
+
+type UnsplashImage = {
+  url: string
+  photographerName: string
+  photographerUrl: string
+}
 
 const SEND_MESSAGE_MUTATION = gql`
   mutation SendMessageMutation($message: String!) {
@@ -47,31 +58,55 @@ const SEND_MESSAGE_MUTATION = gql`
           recommendation
           productTitle
           purchaseUrl
+          image
+          photographer
+          photographerUrl
+          imageId
         }
         top {
           recommendation
           productTitle
           purchaseUrl
+          image
+          photographer
+          photographerUrl
+          imageId
         }
         bottom {
           recommendation
           productTitle
           purchaseUrl
+          image
+          photographer
+          photographerUrl
+          imageId
         }
         accessories {
           recommendation
           productTitle
           purchaseUrl
+          image
+          photographer
+          photographerUrl
+          imageId
         }
         wildcard1 {
           recommendation
           productTitle
           purchaseUrl
+          image
+          photographer
+          photographerUrl
+          imageId
         }
         wildcard2 {
           recommendation
           productTitle
           purchaseUrl
+          image
+          photographer
+          photographerUrl
+          imageId
         }
       }
     }
@@ -79,12 +114,36 @@ const SEND_MESSAGE_MUTATION = gql`
 `
 
 const HomePage = () => {
+  const { isAuthenticated, signUp, currentUser, logOut } = useAuth()
+
+  const handleSignUp = async () => {
+    try {
+      await signUp({
+        redirectTo: window.location.origin,
+        appState: {
+          targetUrl: window.location.pathname,
+        },
+      })
+    } catch (error) {
+      console.error('Auth error:', error)
+    }
+  }
+
+  const handleLogOut = async () => {
+    try {
+      await logOut({ returnTo: window.location.origin })
+    } catch (error) {
+      console.error('Error logging out:', error)
+    }
+  }
+
   const [sendMessage] = useMutation(SEND_MESSAGE_MUTATION)
   const [result, setResult] = useState(null)
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [showExample, setShowExample] = useState(true)
   const [detailsOpen, setDetailsOpen] = useState(false)
+  const [selectedSubmission, setSelectedSubmission] = useState(null)
 
   const resetState = () => {
     setResult(null)
@@ -107,8 +166,57 @@ const HomePage = () => {
     }
   }
 
+  const handleSubmissionSelect = (submission) => {
+    setResult({
+      location: {
+        place_name: submission.location,
+        lat: submission.lat,
+        lon: submission.lon,
+      },
+      weather: submission.weather,
+      clothing: submission.clothing,
+    })
+    setShowExample(false)
+  }
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Sidebar onSubmissionSelect={handleSubmissionSelect} />
+      {isAuthenticated && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 16,
+            right: 24,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+          }}
+        >
+          <Typography
+            sx={{
+              color: 'text.primary',
+              fontSize: '1rem',
+              fontWeight: 500,
+            }}
+          >
+            {currentUser?.name || 'User'}
+          </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleLogOut}
+            sx={{
+              textTransform: 'none',
+              borderColor: 'rgba(0, 0, 0, 0.23)',
+              color: 'text.primary',
+            }}
+          >
+            Log Out
+          </Button>
+        </Box>
+      )}
+
       <Paper elevation={0} sx={{ p: 4, bgcolor: 'transparent' }}>
         <Box
           sx={{
@@ -165,13 +273,38 @@ const HomePage = () => {
             </Link>
           </Typography>
         </Box>
+
+        {!isAuthenticated && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+            <Button
+              variant="contained"
+              onClick={handleSignUp}
+              sx={{
+                backgroundColor: '#2196f3',
+                color: 'white',
+                textTransform: 'none',
+                fontSize: '1rem',
+                fontWeight: 500,
+                px: 4,
+                py: 1,
+                borderRadius: '8px',
+                '&:hover': {
+                  backgroundColor: '#1976d2',
+                },
+              }}
+            >
+              Sign Up
+            </Button>
+          </Box>
+        )}
+
         <Form onSubmit={onSubmit}>
           <Box
             sx={{
               display: 'flex',
               flexDirection: { xs: 'column', sm: 'row' },
               gap: 2,
-              mb: 2
+              mb: 2,
             }}
           >
             <TextField
@@ -191,7 +324,8 @@ const HomePage = () => {
             <Box
               sx={{
                 minWidth: '140px',
-                '& button': {  // This targets the Submit button inside
+                '& button': {
+                  // This targets the Submit button inside
                   width: '100%',
                   height: '56px',
                   backgroundColor: '#2196f3',
@@ -202,18 +336,16 @@ const HomePage = () => {
                   fontWeight: 500,
                   border: 'none',
                   '&:hover': {
-                    backgroundColor: '#1976d2'
+                    backgroundColor: '#1976d2',
                   },
                   '&:disabled': {
                     backgroundColor: '#2196f3',
                     opacity: 0.5,
                   },
-                }
+                },
               }}
             >
-              <Submit
-                disabled={loading || inputValue.trim().length === 0}
-              >
+              <Submit disabled={loading || inputValue.trim().length === 0}>
                 {loading ? (
                   <CircularProgress size={24} color="inherit" />
                 ) : (
@@ -224,20 +356,18 @@ const HomePage = () => {
           </Box>
           {showExample && (
             <Box sx={{ mb: 4 }}>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 1 }}
-              >
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Try an example:
               </Typography>
               <Button
                 variant="outlined"
                 size="small"
-                onClick={() => setInputValue('City where the Boston Red Sox play')}
+                onClick={() =>
+                  setInputValue('City where the Boston Red Sox play')
+                }
                 sx={{
                   textTransform: 'none',
-                  mr: 1
+                  mr: 1,
                 }}
               >
                 City where the Boston Red Sox play
@@ -252,9 +382,16 @@ const HomePage = () => {
               <Typography variant="h4" component="h1" gutterBottom>
                 {result.location.place_name}
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                {result.location.lat.toFixed(4)}°N, {result.location.lon.toFixed(4)}°W
-              </Typography>
+              {result.location.lat !== 0 && result.location.lon !== 0 && (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 3 }}
+                >
+                  {result.location.lat.toFixed(2)}°N,{' '}
+                  {result.location.lon.toFixed(2)}°W
+                </Typography>
+              )}
 
               <Grid container spacing={3} sx={{ mb: 4 }}>
                 <Grid xs={12} sm={4}>
@@ -275,14 +412,14 @@ const HomePage = () => {
                       </Box>
                       <Box>
                         <Typography component="div" variant="body1">
-                          {result.weather.temp}°F
+                          {Math.round(result.weather.temp)}°F
                         </Typography>
                         <Typography
                           component="div"
                           variant="body2"
                           color="text.secondary"
                         >
-                          Feels like: {result.weather.feels_like}°F
+                          Feels like: {Math.round(result.weather.feels_like)}°F
                         </Typography>
                       </Box>
                     </CardContent>
@@ -335,40 +472,96 @@ const HomePage = () => {
               </Grid>
 
               <Typography variant="h5" component="h2" sx={{ mb: 3 }}>
-                Suggested Outfit
+                Your outfit mood board
               </Typography>
               <Box
                 sx={{
-                  display: 'grid',
-                  gridTemplateColumns: {
-                    xs: '1fr', // mobile: single column
-                    sm: 'repeat(3, 1fr)', // tablet & up: three columns
+                  columnCount: {
+                    xs: 2,
+                    sm: 3,
                   },
-                  gap: 2,
+                  columnGap: 2,
                 }}
               >
                 {[
-                  { label: 'Footwear', value: result.clothing.footwear.recommendation },
-                  { label: 'Top', value: result.clothing.top.recommendation },
-                  { label: 'Weather Bonus', value: result.clothing.wildcard1.recommendation },
-                  { label: 'Style Boost', value: result.clothing.wildcard2.recommendation },
-                  { label: 'Bottom', value: result.clothing.bottom.recommendation },
-                  { label: 'Accessories', value: result.clothing.accessories.recommendation },
+                  { label: 'Footwear', item: result.clothing.footwear },
+                  { label: 'Top', item: result.clothing.top },
+                  { label: 'Weather Bonus', item: result.clothing.wildcard1 },
+                  { label: 'Style Boost', item: result.clothing.wildcard2 },
+                  { label: 'Bottom', item: result.clothing.bottom },
+                  { label: 'Accessories', item: result.clothing.accessories },
                 ].map((item) => (
-                  <Card key={item.label} sx={{ height: '100%' }}>
-                    <CardContent>
-                      <Typography
-                        variant="subtitle1"
-                        color="text.secondary"
-                        gutterBottom
-                        component="div"
-                      >
-                        {item.label}
-                      </Typography>
-                      <Typography component="div" variant="body1">
-                        {item.value}
-                      </Typography>
-                    </CardContent>
+                  <Card
+                    key={item.label}
+                    sx={{
+                      display: 'inline-block',
+                      width: '100%',
+                      height: 'auto',
+                      overflow: 'hidden',
+                      boxShadow: 'none',
+                      mb: 2,
+                      borderRadius: 0,
+                    }}
+                  >
+                    <Box sx={{ position: 'relative' }}>
+                      <img
+                        src={item.item.image}
+                        alt={item.label}
+                        style={{
+                          width: '100%',
+                          height: 'auto',
+                          objectFit: 'cover',
+                          display: 'block',
+                        }}
+                        onLoad={() => {
+                          if (!selectedSubmission && item.item.imageId) {
+                            fetch(
+                              `https://api.unsplash.com/photos/${item.item.imageId}/download`,
+                              {
+                                headers: {
+                                  Authorization: `Client-ID ${process.env.UNSPLASH_ACCESS_KEY}`,
+                                },
+                              }
+                            )
+                          }
+                        }}
+                      />
+                      {item.item.photographer &&
+                        item.item.photographerUrl?.includes('unsplash.com') && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              position: 'absolute',
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              bgcolor: 'rgba(0, 0, 0, 0.6)',
+                              color: 'white',
+                              p: 1,
+                              textAlign: 'center',
+                            }}
+                          >
+                            Photo by{' '}
+                            <MuiLink
+                              href={item.item.photographerUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              sx={{ color: 'white' }}
+                            >
+                              {item.item.photographer}
+                            </MuiLink>{' '}
+                            on{' '}
+                            <MuiLink
+                              href="https://unsplash.com"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              sx={{ color: 'white' }}
+                            >
+                              Unsplash
+                            </MuiLink>
+                          </Typography>
+                        )}
+                    </Box>
                   </Card>
                 ))}
               </Box>
@@ -384,26 +577,32 @@ const HomePage = () => {
                   onClick={() => setDetailsOpen(!detailsOpen)}
                 >
                   <Typography variant="h5" component="h2">
-                    Item Details
+                    Recreate the fit
                   </Typography>
                   <IconButton
                     aria-label="toggle details"
                     size="small"
                     sx={{ ml: 1 }}
                   >
-                    {detailsOpen ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                    {detailsOpen ? (
+                      <KeyboardArrowUpIcon />
+                    ) : (
+                      <KeyboardArrowDownIcon />
+                    )}
                   </IconButton>
                 </Box>
 
                 <Collapse in={detailsOpen}>
                   <Box sx={{ overflowX: 'auto' }}>
-                    <Table sx={{
-                      minWidth: 650,
-                      '& th, & td': {
-                        borderBottom: '1px solid rgba(224, 224, 224, 0.4)',
-                        padding: '16px',
-                      },
-                    }}>
+                    <Table
+                      sx={{
+                        minWidth: 650,
+                        '& th, & td': {
+                          borderBottom: '1px solid rgba(224, 224, 224, 0.4)',
+                          padding: '16px',
+                        },
+                      }}
+                    >
                       <TableHead>
                         <TableRow>
                           <TableCell
@@ -435,9 +634,18 @@ const HomePage = () => {
                           { label: 'Footwear', item: result.clothing.footwear },
                           { label: 'Top', item: result.clothing.top },
                           { label: 'Bottom', item: result.clothing.bottom },
-                          { label: 'Accessories', item: result.clothing.accessories },
-                          { label: 'Weather Bonus', item: result.clothing.wildcard1 },
-                          { label: 'Style Boost', item: result.clothing.wildcard2 },
+                          {
+                            label: 'Accessories',
+                            item: result.clothing.accessories,
+                          },
+                          {
+                            label: 'Weather Bonus',
+                            item: result.clothing.wildcard1,
+                          },
+                          {
+                            label: 'Style Boost',
+                            item: result.clothing.wildcard2,
+                          },
                         ].map(({ label, item }) => (
                           <TableRow
                             key={label}
