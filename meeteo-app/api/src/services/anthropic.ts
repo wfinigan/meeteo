@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getWeather } from 'src/services/weather/weather'
 import { db } from 'src/lib/db'
+import { searchGoogleProduct } from 'src/services/google/google'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -53,7 +54,51 @@ export const sendMessage = async ({ message }: { message: string }) => {
       ],
     })
 
-    const clothingSuggestions = JSON.parse(clothingResponse.content[0].text)
+    const clothingDescriptions = JSON.parse(clothingResponse.content[0].text)
+
+    // Fetch Google Shopping products for each clothing item in parallel
+    const [
+      footwear,
+      top,
+      bottom,
+      accessories,
+      wildcard1,
+      wildcard2
+    ] = await Promise.all([
+      searchGoogleProduct(clothingDescriptions.footwear),
+      searchGoogleProduct(clothingDescriptions.top),
+      searchGoogleProduct(clothingDescriptions.bottom),
+      searchGoogleProduct(clothingDescriptions.accessories),
+      searchGoogleProduct(clothingDescriptions.wildcard1),
+      searchGoogleProduct(clothingDescriptions.wildcard2),
+    ])
+
+    const clothingSuggestions = {
+      footwear: {
+        recommendation: clothingDescriptions.footwear,
+        ...footwear,
+      },
+      top: {
+        recommendation: clothingDescriptions.top,
+        ...top,
+      },
+      bottom: {
+        recommendation: clothingDescriptions.bottom,
+        ...bottom,
+      },
+      accessories: {
+        recommendation: clothingDescriptions.accessories,
+        ...accessories,
+      },
+      wildcard1: {
+        recommendation: clothingDescriptions.wildcard1,
+        ...wildcard1,
+      },
+      wildcard2: {
+        recommendation: clothingDescriptions.wildcard2,
+        ...wildcard2,
+      },
+    }
 
     // Store the search in the database
     await db.query.create({

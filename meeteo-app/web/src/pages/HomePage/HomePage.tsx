@@ -11,11 +11,21 @@ import {
   Card,
   CardContent,
   Button,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Link as MuiLink,
+  Collapse,
+  IconButton,
 } from '@mui/material'
 import Grid from '@mui/material/Grid2'
 import ThermostatIcon from '@mui/icons-material/Thermostat'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
 import CloudIcon from '@mui/icons-material/Cloud'
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import { Link, routes } from '@redwoodjs/router'
 
 const SEND_MESSAGE_MUTATION = gql`
@@ -33,12 +43,36 @@ const SEND_MESSAGE_MUTATION = gql`
         description
       }
       clothing {
-        footwear
-        top
-        bottom
-        accessories
-        wildcard1
-        wildcard2
+        footwear {
+          recommendation
+          productTitle
+          purchaseUrl
+        }
+        top {
+          recommendation
+          productTitle
+          purchaseUrl
+        }
+        bottom {
+          recommendation
+          productTitle
+          purchaseUrl
+        }
+        accessories {
+          recommendation
+          productTitle
+          purchaseUrl
+        }
+        wildcard1 {
+          recommendation
+          productTitle
+          purchaseUrl
+        }
+        wildcard2 {
+          recommendation
+          productTitle
+          purchaseUrl
+        }
       }
     }
   }
@@ -50,6 +84,7 @@ const HomePage = () => {
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [showExample, setShowExample] = useState(true)
+  const [detailsOpen, setDetailsOpen] = useState(false)
 
   const resetState = () => {
     setResult(null)
@@ -313,12 +348,12 @@ const HomePage = () => {
                 }}
               >
                 {[
-                  { label: 'Footwear', value: result.clothing.footwear },
-                  { label: 'Top', value: result.clothing.top },
-                  { label: 'Weather Bonus', value: result.clothing.wildcard1 },
-                  { label: 'Style Boost', value: result.clothing.wildcard2 },
-                  { label: 'Bottom', value: result.clothing.bottom },
-                  { label: 'Accessories', value: result.clothing.accessories },
+                  { label: 'Footwear', value: result.clothing.footwear.recommendation },
+                  { label: 'Top', value: result.clothing.top.recommendation },
+                  { label: 'Weather Bonus', value: result.clothing.wildcard1.recommendation },
+                  { label: 'Style Boost', value: result.clothing.wildcard2.recommendation },
+                  { label: 'Bottom', value: result.clothing.bottom.recommendation },
+                  { label: 'Accessories', value: result.clothing.accessories.recommendation },
                 ].map((item) => (
                   <Card key={item.label} sx={{ height: '100%' }}>
                     <CardContent>
@@ -336,6 +371,108 @@ const HomePage = () => {
                     </CardContent>
                   </Card>
                 ))}
+              </Box>
+
+              <Box sx={{ mt: 8 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    mb: 3,
+                  }}
+                  onClick={() => setDetailsOpen(!detailsOpen)}
+                >
+                  <Typography variant="h5" component="h2">
+                    Item Details
+                  </Typography>
+                  <IconButton
+                    aria-label="toggle details"
+                    size="small"
+                    sx={{ ml: 1 }}
+                  >
+                    {detailsOpen ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                  </IconButton>
+                </Box>
+
+                <Collapse in={detailsOpen}>
+                  <Box sx={{ overflowX: 'auto' }}>
+                    <Table sx={{
+                      minWidth: 650,
+                      '& th, & td': {
+                        borderBottom: '1px solid rgba(224, 224, 224, 0.4)',
+                        padding: '16px',
+                      },
+                    }}>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell
+                            sx={{
+                              fontWeight: 600,
+                              color: 'text.secondary',
+                              backgroundColor: 'transparent',
+                              fontSize: '0.875rem',
+                              letterSpacing: '0.01em',
+                            }}
+                          >
+                            Recommendation
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              fontWeight: 600,
+                              color: 'text.secondary',
+                              backgroundColor: 'transparent',
+                              fontSize: '0.875rem',
+                              letterSpacing: '0.01em',
+                            }}
+                          >
+                            Product Idea
+                          </TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {[
+                          { label: 'Footwear', item: result.clothing.footwear },
+                          { label: 'Top', item: result.clothing.top },
+                          { label: 'Bottom', item: result.clothing.bottom },
+                          { label: 'Accessories', item: result.clothing.accessories },
+                          { label: 'Weather Bonus', item: result.clothing.wildcard1 },
+                          { label: 'Style Boost', item: result.clothing.wildcard2 },
+                        ].map(({ label, item }) => (
+                          <TableRow
+                            key={label}
+                            sx={{
+                              '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                              },
+                            }}
+                          >
+                            <TableCell sx={{ color: 'text.primary' }}>
+                              {item.recommendation}
+                            </TableCell>
+                            <TableCell>
+                              <MuiLink
+                                href={item.purchaseUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                sx={{
+                                  color: '#2196f3',
+                                  textDecoration: 'none',
+                                  '&:hover': {
+                                    textDecoration: 'underline',
+                                  },
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {item.productTitle}
+                              </MuiLink>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Box>
+                </Collapse>
               </Box>
             </Paper>
           </Box>

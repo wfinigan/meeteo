@@ -12,13 +12,19 @@ export const schema = gql`
     description: String!
   }
 
+  type ClothingItem {
+    recommendation: String!
+    productTitle: String!
+    purchaseUrl: String!
+  }
+
   type Clothing {
-    footwear: String!
-    top: String!
-    bottom: String!
-    accessories: String!
-    wildcard1: String!
-    wildcard2: String!
+    footwear: ClothingItem!
+    top: ClothingItem!
+    bottom: ClothingItem!
+    accessories: ClothingItem!
+    wildcard1: ClothingItem!
+    wildcard2: ClothingItem!
   }
 
   type LocationWithWeather {
