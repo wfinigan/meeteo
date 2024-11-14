@@ -10,13 +10,20 @@ export const schema = gql`
     weather: WeatherInput!
   }
 
-  type OutfitAnalysis {
-    success: Boolean!
-    feedback: String
+  type AnalysisInitiationResponse {
+    analysisId: String
+    status: String!
     error: String
   }
 
+  type AnalysisStatusResponse {
+    status: String!
+    feedback: String
+  }
+
   type Mutation {
-    analyzeOutfit(input: AnalyzeOutfitInput!): OutfitAnalysis! @requireAuth
+    initiateAnalysis(input: AnalyzeOutfitInput!): AnalysisInitiationResponse!
+      @requireAuth
+    getAnalysisStatus(analysisId: String!): AnalysisStatusResponse! @requireAuth
   }
 `
