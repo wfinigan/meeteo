@@ -115,12 +115,21 @@ const SEND_MESSAGE_MUTATION = gql`
   }
 `
 
-const ANALYZE_OUTFIT_MUTATION = gql`
-  mutation AnalyzeOutfitMutation($input: AnalyzeOutfitInput!) {
-    analyzeOutfit(input: $input) {
-      success
-      feedback
+const INITIATE_ANALYSIS_MUTATION = gql`
+  mutation InitiateAnalysisMutation($input: AnalyzeOutfitInput!) {
+    initiateAnalysis(input: $input) {
+      analysisId
+      status
       error
+    }
+  }
+`
+
+const GET_ANALYSIS_STATUS_MUTATION = gql`
+  mutation GetAnalysisStatusMutation($analysisId: String!) {
+    getAnalysisStatus(analysisId: $analysisId) {
+      status
+      feedback
     }
   }
 `
@@ -156,12 +165,15 @@ const HomePage = () => {
   const [showExample, setShowExample] = useState(true)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [selectedSubmission, setSelectedSubmission] = useState(null)
-  const [analyzeOutfit] = useMutation(ANALYZE_OUTFIT_MUTATION)
   const fileInputRef = useRef(null)
   const [typingFeedback, setTypingFeedback] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [hasUploaded, setHasUploaded] = useState(false)
+  const [error, setError] = useState(null)
+
+  const [initiateAnalysis] = useMutation(INITIATE_ANALYSIS_MUTATION)
+  const [getAnalysisStatus] = useMutation(GET_ANALYSIS_STATUS_MUTATION)
 
   const resetState = () => {
     setResult(null)
@@ -240,7 +252,7 @@ const HomePage = () => {
           length: base64Image.length,
         })
 
-        const response = await analyzeOutfit({
+        const initResponse = await initiateAnalysis({
           variables: {
             input: {
               image: base64Image,
@@ -253,13 +265,30 @@ const HomePage = () => {
           },
         })
 
-        clearInterval(loadingInterval)
-        setIsAnalyzing(false)
+        if (initResponse.data.initiateAnalysis.analysisId) {
+          const pollInterval = setInterval(async () => {
+            const statusResponse = await getAnalysisStatus({
+              variables: {
+                analysisId: initResponse.data.initiateAnalysis.analysisId,
+              },
+            })
 
-        if (response.data.analyzeOutfit.success) {
-          typewriterEffect(response.data.analyzeOutfit.feedback)
+            const status = statusResponse.data.getAnalysisStatus
+            if (status.status === 'completed') {
+              clearInterval(pollInterval)
+              clearInterval(loadingInterval)
+              setIsAnalyzing(false)
+              typewriterEffect(status.feedback)
+            } else if (status.status === 'error') {
+              clearInterval(pollInterval)
+              clearInterval(loadingInterval)
+              setIsAnalyzing(false)
+              toast.error('Analysis failed')
+            }
+          }, 2000)
         } else {
-          toast.error(response.data.analyzeOutfit.error || 'Analysis failed')
+          clearInterval(loadingInterval)
+          setIsAnalyzing(false)
         }
       }
       reader.readAsDataURL(file)
