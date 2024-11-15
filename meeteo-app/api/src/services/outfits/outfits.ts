@@ -35,7 +35,7 @@ Temperature: ${weather.temp}°F
 Conditions: ${weather.description}
 Feels like: ${weather.feelsLike}°F
 
-Please analyze the outfit in the provided image and tell me if it's appropriate for these weather conditions.`
+Please analyze the outfit in the provided image and tell me if it's appropriate for these weather conditions. Limit response to 240 characters.`
 
     const response = await anthropic.messages.create({
       model: 'claude-3-opus-20240229',
