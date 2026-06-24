@@ -3,6 +3,8 @@ import { useState, useRef } from 'react'
 import CloudIcon from '@mui/icons-material/Cloud'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+import MicIcon from '@mui/icons-material/Mic'
+import StopIcon from '@mui/icons-material/Stop'
 import ThermostatIcon from '@mui/icons-material/Thermostat'
 import UploadIcon from '@mui/icons-material/Upload'
 import WaterDropIcon from '@mui/icons-material/WaterDrop'
@@ -24,6 +26,8 @@ import {
   Link as MuiLink,
   Collapse,
   IconButton,
+  InputAdornment,
+  Tooltip,
 } from '@mui/material'
 import Grid from '@mui/material/Grid2'
 
@@ -162,11 +166,50 @@ const HomePage = () => {
   const [isTyping, setIsTyping] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [hasUploaded, setHasUploaded] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+  const recognitionRef = useRef<SpeechRecognition | null>(null)
 
   const resetState = () => {
     setResult(null)
     setInputValue('')
     setShowExample(true)
+  }
+
+  const startListening = () => {
+    const SpeechRecognitionAPI =
+      window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognitionAPI) {
+      toast.error('Speech recognition is not supported in your browser')
+      return
+    }
+
+    const recognition = new SpeechRecognitionAPI()
+    recognition.continuous = false
+    recognition.interimResults = false
+    recognition.lang = 'en-US'
+
+    recognition.onstart = () => setIsListening(true)
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const transcript = event.results[0][0].transcript
+      setInputValue(transcript)
+      setIsListening(false)
+    }
+
+    recognition.onerror = () => {
+      toast.error('Could not recognize speech. Please try again.')
+      setIsListening(false)
+    }
+
+    recognition.onend = () => setIsListening(false)
+
+    recognitionRef.current = recognition
+    recognition.start()
+  }
+
+  const stopListening = () => {
+    recognitionRef.current?.stop()
+    setIsListening(false)
   }
 
   const onSubmit = async () => {
@@ -352,6 +395,33 @@ const HomePage = () => {
                   backgroundColor: 'white',
                   borderRadius: '8px',
                 },
+              }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Tooltip
+                      title={isListening ? 'Stop recording' : 'Record location'}
+                    >
+                      <IconButton
+                        onClick={isListening ? stopListening : startListening}
+                        edge="end"
+                        sx={{
+                          color: isListening ? '#f44336' : 'action.active',
+                          animation: isListening
+                            ? 'pulse 1s ease-in-out infinite'
+                            : 'none',
+                          '@keyframes pulse': {
+                            '0%': { opacity: 1 },
+                            '50%': { opacity: 0.4 },
+                            '100%': { opacity: 1 },
+                          },
+                        }}
+                      >
+                        {isListening ? <StopIcon /> : <MicIcon />}
+                      </IconButton>
+                    </Tooltip>
+                  </InputAdornment>
+                ),
               }}
             />
             <Box
