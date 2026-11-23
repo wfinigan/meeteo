@@ -29,3 +29,11 @@ MeetEo is a web application that provides clothing recommendations based on loca
 ### Environment Variables
 
 Create a `.env` file in the root directory with:
+
+```
+ANTHROPIC_API_KEY=your-anthropic-key
+OPENWEATHER_API_KEY=your-openweather-key
+GOOGLE_API_KEY=your-google-key
+GOOGLE_SEARCH_ENGINE_ID=your-search-engine-id
+UNSPLASH_ACCESS_KEY=your-unsplash-key
+```
